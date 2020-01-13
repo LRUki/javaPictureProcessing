@@ -72,6 +72,13 @@ public class TestSuite {
         Utils.loadPicture("images/green64x64FVdoc.png"),
         TestSuiteHelper.runMain(tmpFolder, "flip", "V", "images/green64x64doc.png"));
   }
+  //extra test
+  @Test
+  public void flipHGreen() throws IOException {
+    assertEquals(
+            Utils.loadPicture("images/green64x64FHdoc.png"),
+            TestSuiteHelper.runMain(tmpFolder, "flip", "H", "images/green64x64doc.png"));
+  }
 
   @Test
   public void flipVBlue() throws IOException {

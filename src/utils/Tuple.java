@@ -2,7 +2,7 @@ package utils;
 
 public class Tuple<X, Y> {
 
-  private final X x;
+  public final X x;
   private final Y y;
 
   public X getX() {
