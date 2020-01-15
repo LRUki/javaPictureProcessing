@@ -1,6 +1,6 @@
 package picture;
 
-import jdk.jshell.execution.Util;
+import org.openjdk.tools.javah.Util;
 import utils.Tuple;
 
 import java.util.ArrayList;
@@ -17,13 +17,13 @@ public class Process {
 
 
     Process(Picture picture){
-        this.picture = picture;
-        width = picture.getWidth();
-        height = picture.getHeight();
+        setPicture(picture);
     }
 
     Process(Picture[] pictures){
         this.pictures = pictures;
+        this.width = getMinWH().getX();
+        this.height = getMinWH().getY();
     }
 
     //returns the picture
@@ -31,7 +31,7 @@ public class Process {
         return picture;
     }
 
-    //reset the picture
+    //set the picture
     private void setPicture(Picture picture){
         this.picture = picture;
         this.width = picture.getWidth();
@@ -41,49 +41,41 @@ public class Process {
 
 
     public void invert(){
-//        The invert transformation inverts the colour components of each pixel in the given picture.
-//        replaces the original intensity value of each primary
-//        colour, c, with the intensity (255 - c).
-
         for (int i = 0; i < width; i++){
             for (int j = 0; j < height; j++){
-                Color before = picture.getPixel(i,j);
+                Color before = picture.getPixel(i, j);
                 Color after = new Color(255 - before.getRed(),255 - before.getGreen(),255 - before.getBlue());
-                picture.setPixel(i,j,after);
+                picture.setPixel(i, j, after);
             }
         }
-
     }
 
     public void grayscale(){
-
         for (int i = 0; i < width; i++){
             for (int j = 0; j < height; j++){
-                Color before = picture.getPixel(i,j);
+                Color before = picture.getPixel(i, j);
                 int avg = (before.getBlue() + before.getGreen() + before.getRed()) / 3;
-                Color after = new Color(avg,avg,avg);
-                picture.setPixel(i,j,after);
+                Color after = new Color(avg, avg, avg);
+                picture.setPixel(i, j, after);
             }
         }
     }
-//3cc36537
+
     public void blur(){
         Picture blurredPic = Utils.createPicture(width,height);
         for (int i = 0; i < width; i++){
             for (int j = 0; j < height; j++){
-
-                //boundaries
+                //no change for boundary pixels
                 if(i == 0 || j == 0 || i == width - 1 || j == height - 1){
-                    blurredPic.setPixel(i, j, picture.getPixel(i,j));
+                    blurredPic.setPixel(i, j, picture.getPixel(i, j));
                 }else{
-                    Color newColor = getAvgBlur(i,j);
+                    Color newColor = getAvgBlur(i, j);
                     blurredPic.setPixel(i, j, newColor);
                 }
 
             }
         }
         setPicture(blurredPic);
-
     }
 
     public void flip(String direction){
@@ -94,11 +86,12 @@ public class Process {
             case "V":
                 reverseCols();
                 break;
+            default:
+                throw new Error("Invalid input! Choose V or H");
         }
     }
 
     public void rotate(String angle){
-
         switch (angle){
             case "90":
                 transpose();
@@ -113,19 +106,16 @@ public class Process {
                 reverseCols();
                 break;
             default:
-                throw new Error("Invalid input! The angle is either 90 or 180 or 270!");
+                throw new Error("Invalid input! Choose 90 or 180 or 270");
         }
     }
 
     public void blend(){
+        //constructor sets the width and height to the minimum value of the pics
+        Picture blendedPic = Utils.createPicture(width,height);
 
-        Tuple<Integer,Integer> WH = getMinWH();
-        int minWidth = WH.getX().intValue();
-        int minHeight = WH.getY().intValue();
-        Picture blendedPic = Utils.createPicture(minWidth,minHeight);
-
-        for (int i = 0; i < minWidth; i++){
-            for (int j = 0; j < minHeight; j++){
+        for (int i = 0; i < width; i++){
+            for (int j = 0; j < height; j++){
                 Color newColor = getAvgBlend(i, j);
                 blendedPic.setPixel(i, j, newColor);
             }
@@ -133,26 +123,26 @@ public class Process {
         setPicture(blendedPic);
     }
 
-    private Tuple<Integer,Integer> getMinWH(){
-        int minWidth = pictures[0].getWidth();
-        int minHeight = pictures[0].getHeight();
-        for (int i = 0; i < pictures.length; i++){
-            minWidth = Math.min(pictures[i].getWidth(), minWidth);
-            minHeight = Math.min(pictures[i].getHeight(), minHeight);
+    public void mosaic(String tileSize){
+        int tileSizeInt = Integer.parseInt(tileSize);
+        Picture mosaicPic = Utils.createPicture(width, height);
+        //set the first pixels
+        initMosaic(tileSizeInt, mosaicPic);
+
+        for (int i = 0; i < width; i++){
+            for (int j = 0; j < height; j++){
+               if(tileSizeInt <= i || tileSizeInt <= j){
+                   if(i % tileSizeInt == 0 && j % tileSizeInt == 0){
+                       setPixel(i, j, tileSizeInt, mosaicPic);
+                   }
+               }
+            }
         }
-        return new Tuple(minWidth,minHeight);
+        setPicture(mosaicPic);
     }
 
-    private Color getAvgBlend(int x, int y){
-        int redSum = 0, greenSum = 0, blueSum = 0;
-        for (int i = 0; i < pictures.length; i++){
-            Color current = pictures[i].getPixel(x,y);
-            redSum += current.getRed();
-            greenSum += current.getGreen();
-            blueSum += current.getBlue();
-        }
-        return new Color(redSum/pictures.length,greenSum/pictures.length,blueSum/pictures.length);
-    }
+
+    
 
     /************************ Helper functions *************************/
 
@@ -232,7 +222,72 @@ public class Process {
         }
     }
 
+    //helper for blend
+    private Tuple<Integer,Integer> getMinWH(){
+        int minWidth = pictures[0].getWidth();
+        int minHeight = pictures[0].getHeight();
+        for (int i = 0; i < pictures.length; i++){
+            minWidth = Math.min(pictures[i].getWidth(), minWidth);
+            minHeight = Math.min(pictures[i].getHeight(), minHeight);
+        }
+        return new Tuple(minWidth,minHeight);
+    }
 
+    private Color getAvgBlend(int x, int y){
+        int redSum = 0, greenSum = 0, blueSum = 0;
+        for (int i = 0; i < pictures.length; i++){
+            Color current = pictures[i].getPixel(x,y);
+            redSum += current.getRed();
+            greenSum += current.getGreen();
+            blueSum += current.getBlue();
+        }
+        return new Color(redSum/pictures.length,greenSum/pictures.length,blueSum/pictures.length);
+    }
+
+    //helper for mosaic
+    private Picture getPicMosaic(int x, int y, Picture picture){
+        Color targetColor;
+        Color currentColor;
+        if(picture.contains(x - 1, y)){
+            targetColor = picture.getPixel(--x, y);
+        }else{
+            targetColor = picture.getPixel(x, --y);
+        }
+        for (int i = 0; i < pictures.length; i++){
+            currentColor = pictures[i].getPixel(x, y);
+            if (compareCol(currentColor,targetColor)){
+                return pictures[(i + 1) % pictures.length];
+            }
+        }
+        return null;
+    }
+
+    private void setPixel(int x, int y, int tileSize, Picture picture){
+        Picture currentPic = getPicMosaic(x,y, picture);
+        for(int i = x; i < x + tileSize; i++){
+            for (int j = y; j < y + tileSize; j++){
+                if(picture.contains(i, j)){
+                    picture.setPixel(i, j, currentPic.getPixel(i, j));
+                }
+            }
+        }
+    }
+
+    private void initMosaic(int tileSize, Picture picture){
+        Picture fstPic = pictures[0];
+        for (int i = 0; i < tileSize; i++){
+            for (int j = 0; j < tileSize; j++){
+                if (picture.contains(i ,j)){
+                    picture.setPixel(i, j, fstPic.getPixel(i, j));
+                }
+            }
+        }
+    }
+
+
+    private static boolean compareCol (Color a, Color b){
+        return (a.getRed() == b.getRed()) && (a.getGreen() == b.getGreen()) && (a.getBlue() == b.getBlue());
+    }
 
 
 }
