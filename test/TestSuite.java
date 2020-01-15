@@ -123,4 +123,20 @@ public class TestSuite {
         TestSuiteHelper.runMain(
             tmpFolder, "blend", "images/rainbow64x64doc.png", "images/sunset64x32.png"));
   }
+
+  @Test
+  public void mosaicBlackWhite1() throws IOException {
+    assertEquals(
+            Utils.loadPicture("images/mosaicBW1.png"),
+            TestSuiteHelper.runMain(
+                    tmpFolder, "mosaic","1", "images/black64x64.png", "images/white64x64.png"));
+  }
+
+  @Test
+  public void mosaicBlackWhite5() throws IOException {
+    assertEquals(
+            Utils.loadPicture("images/mosaicBW5.png"),
+            TestSuiteHelper.runMain(
+                    tmpFolder, "mosaic","5", "images/black64x64.png", "images/white64x64.png"));
+  }
 }
